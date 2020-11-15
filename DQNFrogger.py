@@ -104,21 +104,59 @@ class DQNFrogger:
 
         return action
 
-def customReward(reward, action, fellIntoWater):
+def customReward(reward, action, fellIntoWater, level):
     # We want to add intermediate rewards as well, since the openAI gym only gives rewards on winning
 
     if (reward != 1):
         if (fellIntoWater):
             return 0
         else:
-            if (action == 2):  # Up (behind)
-                return 0.1
+            if (action == 2 and level == 0) or (action == 5 and level == 4):
+                return 0
+            elif (action == 2 ):  # Up (behind)
+                return 0.3
             elif (action == 5):  # Down (forward)
-                return 0.7
+                return 0.5
             else:
                 return 0
 
     return 1
+
+
+def levelUpdate(prevLevel, action):
+    level = prevLevel
+    if action == 2:
+        level = max(0, level - 1)
+    elif action == 5:
+        level = min(4, level + 1)
+    #
+    # if level is not prevLevel:
+    #     print("Level: ", level)
+    # else:
+    #     print("Unchanged level: ", level)
+
+    return level
+
+
+def skipFramesOnAction(action, died):
+    if (died):
+        return 100
+
+    if (action == 0):
+        return 1
+    elif (action == 2):
+        return 30
+    elif (action == 3):
+        return 2
+    elif (action == 4):
+        return 2
+    elif (action == 5):
+        return 30
+
+    return 0
+
+def hasDied(prevInfo, info):
+    return (prevInfo != info and prevInfo != "")
 
 def main():
     env = gym.make("Frostbite-ramDeterministic-v4")
@@ -130,16 +168,25 @@ def main():
 
     dqnAgent = DQNFrogger(env=env)
 
+    level = 0;
+    stepSkip = 0;
+
     for trial in range(numTrials):
         currentState = env.reset() # Reset to the starting state
 
         for step in range(maxSteps):
             frame = env.render()
+            # if stepSkip > 0:
+            #     stepSkip -= 1
+            #     continue
             action = dqnAgent.takeAction(currentState, step) # Take a random action, within our defined action list
-
             nextState, reward, done, info = env.step(action)
-            reward = customReward(reward, action, (prevInfo != info and prevInfo != ""))
+            reward = customReward(reward, action, hasDied(prevInfo, info), level)
+            # level = levelUpdate(level, action)
             prevInfo = info
+
+            print(action)
+            stepSkip = skipFramesOnAction(action, hasDied(prevInfo, info))
 
             dqnAgent.remember(currentState, action, reward, nextState, done)
             dqnAgent.replay()
