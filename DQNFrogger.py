@@ -94,6 +94,8 @@ class DQNFrogger:
         else:
             state = np.reshape(state, (1, self.stateSize))
             action = np.argmax(self.model.predict(state)[0])
+            if action > 0:
+                action += 1
 
         if step >= self.startLearning:
             self.epsilon *= self.epsilonDecay
@@ -105,19 +107,18 @@ class DQNFrogger:
 def customReward(reward, action, fellIntoWater):
     # We want to add intermediate rewards as well, since the openAI gym only gives rewards on winning
 
-    newReward = reward
     if (reward != 1):
         if (fellIntoWater):
-            newReward = 0
+            return 0
         else:
-            if (action == 0 or action == 3 or action == 4): # Left/Right/NOOP
-                newReward = 0.3
-            elif (action == 2): # Up (behind)
-                newReward = 0.1
-            elif (action == 5): # Down (forward)
-                newReward = 0.7
+            if (action == 2):  # Up (behind)
+                return 0.1
+            elif (action == 5):  # Down (forward)
+                return 0.7
+            else:
+                return 0
 
-    return newReward
+    return 1
 
 def main():
     env = gym.make("Frostbite-ramDeterministic-v4")
@@ -148,7 +149,10 @@ def main():
             if done:
                 # We need to reset the environment again
                 # We either won, or lost all our lives
+                print("Trial #", trial+1)
                 print("Finished after {} timesteps".format(step+1))
+                print("Reward: ", reward)
+                print()
                 break
 
 if __name__ == "__main__":
