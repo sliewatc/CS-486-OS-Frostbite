@@ -20,8 +20,8 @@ class DQNFrogger:
         # 'UPLEFT', 'DOWNRIGHT', 'DOWNLEFT', 'UPFIRE', 'RIGHTFIRE', 'LEFTFIRE', 'DOWNFIRE', 'UPRIGHTFIRE',
         # 'UPLEFTFIRE', 'DOWNRIGHTFIRE', 'DOWNLEFTFIRE']
         # We only need 5 actions: ['NOOP', 'UP', 'RIGHT', 'LEFT', 'DOWN']
-        self.numActions = 5
-        self.actions = [0, 2, 3, 4, 5]
+        self.numActions = 3
+        self.actions = [0, 2, 5] #[0, 2, 3, 4, 5]
         self.stateSize = env.reset().shape[0]
         self.memory = collections.deque(maxlen=10000)
 
@@ -75,10 +75,16 @@ class DQNFrogger:
 
         for i, action in enumerate(actionsBatch):
             # Must decrement the action by 1 for actions 1,2,3,4, since we took away the FIRE action from the original action space
+            # if action == 0:
+            #     targetsPrediction[i][action] = targetQValue[i]
+            # else:
+            #     targetsPrediction[i][action - 1] = targetQValue[i]
             if action == 0:
                 targetsPrediction[i][action] = targetQValue[i]
-            else:
-                targetsPrediction[i][action - 1] = targetQValue[i]
+            elif action == 2:
+                targetsPrediction[i][1] = targetQValue[i]
+            elif action == 5:
+                targetsPrediction[i][2] = targetQValue[i]
 
         self.model.fit(statesBatch, targetsPrediction, epochs=1, verbose=0)
 
@@ -94,8 +100,14 @@ class DQNFrogger:
         else:
             state = np.reshape(state, (1, self.stateSize))
             action = np.argmax(self.model.predict(state)[0])
-            if action > 0:
-                action += 1
+
+            if (action == 1):
+                return 2
+            elif (action == 2):
+                return 5
+
+            # if action > 0:
+            #     action += 1
 
         if step >= self.startLearning:
             self.epsilon *= self.epsilonDecay
@@ -104,23 +116,31 @@ class DQNFrogger:
 
         return action
 
-def customReward(reward, action, fellIntoWater, level):
+def customReward(reward, action, fellIntoWater, stageReward):
     # We want to add intermediate rewards as well, since the openAI gym only gives rewards on winning
+    if (reward > 0):
+        return 5 ** (stageReward / 10)
 
-    if (reward != 1):
-        if (fellIntoWater):
-            return 0
-        else:
-            if (action == 2 and level == 0) or (action == 5 and level == 4):
-                return 0
-            elif (action == 2 ):  # Up (behind)
-                return 0.3
-            elif (action == 5):  # Down (forward)
-                return 0.5
-            else:
-                return 0
+    if (stageReward >= 150):
+        if action == 5:
+            return 1
+        elif action == 2:
+            return 2
+    else:
+        return reward
 
-    return 1
+    if (fellIntoWater):
+        return 0
+
+    # if (action == 2 ):  # Up (behind)
+    #     return 0.3
+    # elif (action == 5):  # Down (forward)
+    #     return 0.5
+
+
+    return 0
+
+
 
 
 def levelUpdate(prevLevel, action):
@@ -129,31 +149,14 @@ def levelUpdate(prevLevel, action):
         level = max(0, level - 1)
     elif action == 5:
         level = min(4, level + 1)
-    #
-    # if level is not prevLevel:
-    #     print("Level: ", level)
-    # else:
-    #     print("Unchanged level: ", level)
+
+    if level is not prevLevel:
+        print("Level: ", level)
+    else:
+        print("Unchanged level: ", level)
 
     return level
 
-
-def skipFramesOnAction(action, died):
-    if (died):
-        return 100
-
-    if (action == 0):
-        return 1
-    elif (action == 2):
-        return 30
-    elif (action == 3):
-        return 2
-    elif (action == 4):
-        return 2
-    elif (action == 5):
-        return 30
-
-    return 0
 
 def hasDied(prevInfo, info):
     return (prevInfo != info and prevInfo != "")
@@ -173,21 +176,31 @@ def main():
 
     for trial in range(numTrials):
         currentState = env.reset() # Reset to the starting state
+        stageReward = 0;
+        totalScore = 0;
 
         for step in range(maxSteps):
             frame = env.render()
-            # if stepSkip > 0:
-            #     stepSkip -= 1
-            #     continue
             action = dqnAgent.takeAction(currentState, step) # Take a random action, within our defined action list
             nextState, reward, done, info = env.step(action)
-            reward = customReward(reward, action, hasDied(prevInfo, info), level)
-            # level = levelUpdate(level, action)
+            dead = hasDied(prevInfo, info)
+            if (reward > 0):
+                stageReward += reward
+                totalScore += reward
+                print("stage ", stageReward)
+                print("total", totalScore)
+
+            reward = customReward(reward, action, dead, stageReward)
+
+            if dead:
+                stageReward = 0;
+
+            if dead:
+                print("died")
+
             prevInfo = info
 
-            print(action)
-            stepSkip = skipFramesOnAction(action, hasDied(prevInfo, info))
-
+            # print("Action: ", action)
             dqnAgent.remember(currentState, action, reward, nextState, done)
             dqnAgent.replay()
 
@@ -198,9 +211,10 @@ def main():
                 # We either won, or lost all our lives
                 print("Trial #", trial+1)
                 print("Finished after {} timesteps".format(step+1))
-                print("Reward: ", reward)
+                print("Reward: ", totalScore)
                 print()
                 break
+
 
 if __name__ == "__main__":
     main()
