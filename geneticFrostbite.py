@@ -13,7 +13,7 @@ from tensorflow.keras.optimizers import Adam
 class Organism:
     def __init__(self, env):
         self.env = env
-        self.game_len = 100
+        self.game_len = 900
         self.game_runs = 5
 
         self.numActions = 5
@@ -49,7 +49,14 @@ class Organism:
             # env.render()
 
             if np.random.random() < self.epsilon:
-                action = self.env.action_space.sample()
+                # action = self.env.action_space.sample()
+
+                action = random.choice(self.actions)
+
+                # Keep choosing an action until we get one in our smaller action space
+                # while (not (action in self.actions)):
+                #     action = self.env.action_space.sample()
+
             else:
                 obs = np.reshape(obs, (1, self.stateSize))
                 action = np.argmax(self.genome.predict(obs)[0])
@@ -147,8 +154,9 @@ if __name__ == '__main__':
     env = gym.make('Frostbite-ram-v0')
     env.seed(0)
 
-    generations = 10
-    population_size = 20
+    generations = 5
+    population_size = 5
+    elites_num = 1
     start = time.time()
     population = [Organism(env) for _ in range(population_size)]
 
@@ -174,7 +182,9 @@ if __name__ == '__main__':
         # elite_set = [population[x] for x in population_ranks[:5]]
 
         sorted_organisms = [k for k, v in sorted(fitness_scores.items(), key=lambda item: item[1])]
-        elite_set = [org for org in sorted_organisms[:5]]
+        elite_set = [org for org in sorted_organisms[:elites_num]]
+
+        elite_set[0].genome.save("best_organism")
 
         select_probs = 0
         if (np.sum(fitness_scores) != 0):
@@ -183,7 +193,7 @@ if __name__ == '__main__':
         child_set = [crossover(
             population[np.random.choice(range(population_size), p=select_probs)], 
             population[np.random.choice(range(population_size), p=select_probs)])
-            for _ in range(population_size - 5)]
+            for _ in range(population_size - elites_num)]
         
         mutated_list = [mutation(p) for p in child_set]
         population = elite_set
