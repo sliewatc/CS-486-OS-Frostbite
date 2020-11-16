@@ -104,30 +104,51 @@ class DQNFrogger:
 
         return action
 
-def customReward(reward, action, fellIntoWater, level):
+goForward = True
+iglooCounter = 0
+blueWhiteBlocks = [0, 0, 0, 0]
+score = 0
+level = 0
+
+def customReward(reward, action, fellIntoWater):
     # We want to add intermediate rewards as well, since the openAI gym only gives rewards on winning
 
-    if (reward != 1):
-        if (fellIntoWater):
-            return 0
+    global goForward, iglooCounter, blueWhiteBlocks, score, level
+
+    level = levelUpdate(level, action, fellIntoWater)
+
+    if (fellIntoWater):
+        return 0
+
+    if (reward == 10):
+        score += 10
+
+    if (score >= 160):
+        # Once the igloo's built, we want the dude to drop up (behind) to the igloo
+        if (level == 0): # If we're on the shore, help the dude walk into the igloo
+            if (action == 3):
+                return 20
+            elif (action == 2):
+                return 18
+        if (action == 2): # We want the guy to move up
+            return 15
+        elif (reward == 10): # We want the guy to prioritize moving up then getting more blocks
+            return 8
         else:
-            if (action == 2 and level == 0) or (action == 5 and level == 4):
-                return 0
-            elif (action == 2 ):  # Up (behind)
-                return 0.3
-            elif (action == 5):  # Down (forward)
-                return 0.5
-            else:
-                return 0
-
-    return 1
+            return 0
+    else:
+        return reward
 
 
-def levelUpdate(prevLevel, action):
+def levelUpdate(prevLevel, action, fellIntoWater):
     level = prevLevel
-    if action == 2:
+
+    if (fellIntoWater):
+        return 0
+
+    if action == 2:  # Up (behind)
         level = max(0, level - 1)
-    elif action == 5:
+    elif action == 5:  # Down (forward)
         level = min(4, level + 1)
     #
     # if level is not prevLevel:
@@ -168,26 +189,27 @@ def main():
 
     dqnAgent = DQNFrogger(env=env)
 
-    level = 0;
-    stepSkip = 0;
+    stepSkip = 0
+    data = []
+
+    global goForward, iglooCounter, score, level
 
     for trial in range(numTrials):
         currentState = env.reset() # Reset to the starting state
+        goForward = True
+        iglooCounter = 0
+        score = 0
+        level = 0
+        totalReward = 0
 
         for step in range(maxSteps):
-            frame = env.render()
-            # if stepSkip > 0:
-            #     stepSkip -= 1
-            #     continue
+            #frame = env.render()
+
             action = dqnAgent.takeAction(currentState, step) # Take a random action, within our defined action list
             nextState, reward, done, info = env.step(action)
-            reward = customReward(reward, action, hasDied(prevInfo, info), level)
-            # level = levelUpdate(level, action)
+            #reward = customReward(reward, action, hasDied(prevInfo, info))
+            totalReward += reward
             prevInfo = info
-
-            print(action)
-            stepSkip = skipFramesOnAction(action, hasDied(prevInfo, info))
-
             dqnAgent.remember(currentState, action, reward, nextState, done)
             dqnAgent.replay()
 
@@ -196,11 +218,18 @@ def main():
             if done:
                 # We need to reset the environment again
                 # We either won, or lost all our lives
-                print("Trial #", trial+1)
-                print("Finished after {} timesteps".format(step+1))
-                print("Reward: ", reward)
-                print()
                 break
+
+        data.append(totalReward)
+        print("Trial #", trial + 1)
+        print("Finished after {} timesteps".format(step + 1))
+        print("Reward: ", totalReward)
+        print()
+
+    f = open("trialRewards.txt", "w")
+    for r in data:
+        f.write(r)
+    f.close()
 
 if __name__ == "__main__":
     main()
