@@ -20,8 +20,8 @@ class DQNFrogger:
         # 'UPLEFT', 'DOWNRIGHT', 'DOWNLEFT', 'UPFIRE', 'RIGHTFIRE', 'LEFTFIRE', 'DOWNFIRE', 'UPRIGHTFIRE',
         # 'UPLEFTFIRE', 'DOWNRIGHTFIRE', 'DOWNLEFTFIRE']
         # We only need 5 actions: ['NOOP', 'UP', 'RIGHT', 'LEFT', 'DOWN']
-        self.numActions = 3
-        self.actions = [0, 2, 5] #[0, 2, 3, 4, 5]
+        self.numActions = 5
+        self.actions = [0, 2, 3, 4, 5] #[0, 2, 5]
         self.stateSize = env.reset().shape[0]
         self.memory = collections.deque(maxlen=10000)
 
@@ -75,16 +75,16 @@ class DQNFrogger:
 
         for i, action in enumerate(actionsBatch):
             # Must decrement the action by 1 for actions 1,2,3,4, since we took away the FIRE action from the original action space
-            # if action == 0:
-            #     targetsPrediction[i][action] = targetQValue[i]
-            # else:
-            #     targetsPrediction[i][action - 1] = targetQValue[i]
             if action == 0:
                 targetsPrediction[i][action] = targetQValue[i]
-            elif action == 2:
-                targetsPrediction[i][1] = targetQValue[i]
-            elif action == 5:
-                targetsPrediction[i][2] = targetQValue[i]
+            else:
+                targetsPrediction[i][action - 1] = targetQValue[i]
+            # if action == 0:
+            #     targetsPrediction[i][action] = targetQValue[i]
+            # elif action == 2:
+            #     targetsPrediction[i][1] = targetQValue[i]
+            # elif action == 5:
+            #     targetsPrediction[i][2] = targetQValue[i]
 
         self.model.fit(statesBatch, targetsPrediction, epochs=1, verbose=0)
 
@@ -101,13 +101,13 @@ class DQNFrogger:
             state = np.reshape(state, (1, self.stateSize))
             action = np.argmax(self.model.predict(state)[0])
 
-            if (action == 1):
-                return 2
-            elif (action == 2):
-                return 5
+            # if (action == 1):
+            #     return 2
+            # elif (action == 2):
+            #     return 5
 
-            # if action > 0:
-            #     action += 1
+            if action > 0:
+                action += 1
 
         if step >= self.startLearning:
             self.epsilon *= self.epsilonDecay
@@ -171,16 +171,17 @@ def main():
 
     dqnAgent = DQNFrogger(env=env)
 
-    level = 0;
-    stepSkip = 0;
+    tenRunningScore = 0;
+    tenList = []
 
     for trial in range(numTrials):
         currentState = env.reset() # Reset to the starting state
         stageReward = 0;
         totalScore = 0;
+        step = 0
 
         for step in range(maxSteps):
-            frame = env.render()
+            # frame = env.render()
             action = dqnAgent.takeAction(currentState, step) # Take a random action, within our defined action list
             nextState, reward, done, info = env.step(action)
             dead = hasDied(prevInfo, info)
@@ -190,7 +191,7 @@ def main():
                 print("stage ", stageReward)
                 print("total", totalScore)
 
-            reward = customReward(reward, action, dead, stageReward)
+            # reward = customReward(reward, action, dead, stageReward)
 
             if dead:
                 stageReward = 0;
@@ -207,13 +208,24 @@ def main():
             currentState = nextState
 
             if done:
-                # We need to reset the environment again
-                # We either won, or lost all our lives
-                print("Trial #", trial+1)
-                print("Finished after {} timesteps".format(step+1))
-                print("Reward: ", totalScore)
-                print()
                 break
+
+        # We need to reset the environment again
+        # We either won, or lost all our lives
+        print("Trial #", trial + 1)
+        print("Finished after {} timesteps".format(step + 1))
+        print("Reward: ", totalScore)
+        print()
+
+        tenRunningScore += totalScore
+
+        if (trial + 1) % 10 == 0:
+            print("10 running score: ", tenRunningScore / 10)
+            tenList.append(tenRunningScore / 10)
+            tenRunningScore = 0
+
+    print("Grouping 10 avg: ")
+    print(tenList)
 
 
 if __name__ == "__main__":
