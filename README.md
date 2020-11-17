@@ -21,8 +21,8 @@ If any dependencies are required:\
 - tensorflow
 - atari_py
 
-**Example Output**
-DQNFrogger.py:\
+**Example Output**\
+DQNFrogger.py:
 ```
 stage  30.0
 total 90.0
@@ -38,7 +38,7 @@ Reward:  110.0
 ```
 
 
-geneticFrostbite.py\
+geneticFrostbite.py
 ```
 Calculating fitness for organism 0 in generation 0
 Calculating fitness for organism 1 in generation 0
