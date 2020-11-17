@@ -1,5 +1,11 @@
 # Genetic Algorithm vs DQN Algorithm for Scoring in Frostbite
 
+This repo contains the code for both the genetic algorithm and DQN algorithm for learning
+Frostbit in the OpenAi Gym environment.\n
+
+**Features**\
+For both programs, renders and learns Frostbite.\
+
 To run the genetic algorithm program:\
 *python3 geneticFrostbite.py*
 
@@ -10,9 +16,21 @@ To run the DQN algorithm program:\
 **Dependencies**\
 If any dependencies are required:\
 *pip3 install [dependency]*
+numpy
+gym
+tensorflow
+atari_py
 
+**Example Output**
+stage  30.0
+total 90.0
+stage  40.0
+total 100.0
+stage  50.0
+total 110.0
+died
+died
+Trial # 7
+Finished after 421 timesteps
+Reward:  110.0
 
-or 
-
-
-*sudo apt-get install [dependency]*
