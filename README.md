@@ -16,13 +16,13 @@ To run the DQN algorithm program:\
 **Dependencies**\
 If any dependencies are required:\
 *pip3 install [dependency]*
-numpy
-gym
-tensorflow
-atari_py
+- numpy
+- gym
+- tensorflow
+- atari_py
 
 **Example Output**
-stage  30.0
+```stage  30.0
 total 90.0
 stage  40.0
 total 100.0
@@ -32,5 +32,5 @@ died
 died
 Trial # 7
 Finished after 421 timesteps
-Reward:  110.0
+Reward:  110.0```
 
