@@ -16,8 +16,8 @@ class Organism:
         self.game_len = 900
         self.game_runs = 5
 
-        self.numActions = 5
         self.actions = [0, 2, 3, 4, 5]
+        self.numActions = len(self.actions)
         self.stateSize = env.reset().shape[0]
         self.learningRate = 0.005
         self.epsilon = 1.0
@@ -46,7 +46,7 @@ class Organism:
 
         # run game loop for game_len steps
         for step in range(self.game_len):
-            # env.render()
+            env.render()
 
             if np.random.random() < self.epsilon:
                 # action = self.env.action_space.sample()
@@ -154,9 +154,9 @@ if __name__ == '__main__':
     env = gym.make('Frostbite-ram-v0')
     env.seed(0)
 
-    generations = 5
-    population_size = 5
-    elites_num = 1
+    generations = 10
+    population_size = 50
+    elites_num = 5
     start = time.time()
     population = [Organism(env) for _ in range(population_size)]
 
